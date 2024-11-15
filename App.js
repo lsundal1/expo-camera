@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
+import * as FileSystem from 'expo-file-system';
 import { StyleSheet, Text, View, SafeAreaView, Button, Image } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Camera, CameraView } from 'expo-camera';
 import { shareAsync } from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
+import axios from 'axios'
 
 export default function App() {
   let cameraRef = useRef();
@@ -37,6 +39,38 @@ export default function App() {
     setPhoto(newPhoto);
   };
 
+  const uploadImage = async (photo) => {
+    if (!photo) {
+      console.error("No image selected");
+      return;
+    }
+  
+    const apiKey = 'c78994b77edbc78647d0ed78958294b8';
+    
+    try {
+
+      const base64Image = await FileSystem.readAsStringAsync(photo.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      // const base64Image = await FileSystem.readAsStringAsync(photo, {
+      //   encoding: FileSystem.EncodingType.Base64,
+      // });
+  
+      const formData = new FormData();
+      formData.append('image', base64Image);
+  
+      const response = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+  
+      console.log('Image uploaded successfully:', response.data);
+    } catch (error) {
+      console.error('Image upload failed:', error.response ? error.response.data : error);
+    }
+  };
+
   if (photo) {
     let sharePic = () => {
       shareAsync(photo.uri).then(() => {
@@ -53,7 +87,7 @@ export default function App() {
     return (
       <SafeAreaView style={styles.container}>
         <Image style={styles.preview} source={{ uri: "data:image/jpg;base64," + photo.base64 }} />
-        <Button title="Share" onPress={sharePic} />
+        <Button title="upload" onPress={() => uploadImage(photo)} />
         {hasMediaLibraryPermission ? <Button title="Save" onPress={savePhoto} /> : undefined}
         <Button title="Discard" onPress={() => setPhoto(undefined)} />
       </SafeAreaView>
